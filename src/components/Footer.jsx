@@ -19,7 +19,7 @@ export default function Footer() {
         <div>AI Music Platform · Proof of Concept</div>
         <div style={{ marginTop: '8px', color: 'var(--muted)', fontSize: '.85rem' }}>Модель: YuE (Tencent) + custom fine-tuning · Инфра: RunPod Serverless · Стек: React + FastAPI + PostgreSQL</div>
         <div className="ft-pow">
-          <a href="#">GitHub</a> · <a href="/docs">API Docs</a> · <a href="#">Архитектура</a>
+          <a href="#">GitHub</a> · <a href="#api">API Docs</a> · <a href="#">Архитектура</a>
         </div>
         <div style={{ marginTop: '16px', fontSize: '.75rem', color: 'var(--muted)' }}>Built by Вова Егоров · 2025</div>
       </div>

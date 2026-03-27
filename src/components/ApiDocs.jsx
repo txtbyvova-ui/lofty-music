@@ -18,7 +18,7 @@ export default function ApiDocs() {
     <section id="api">
       <div className="sec-lbl">API</div>
       <div className="sec-title">REST API</div>
-      <p className="sec-sub">Full documentation — <a href="/docs" style={{ color: 'var(--acc2)' }}>Swagger UI ↗</a></p>
+      <p className="sec-sub">Full documentation — <a href="#api" style={{ color: 'var(--acc2)' }}>Swagger UI ↗</a></p>
       <div className="api-list">
         {ENDPOINTS.map((ep, i) => (
           <div key={i} className="api-row">
