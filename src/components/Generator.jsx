@@ -1,7 +1,20 @@
 import { useState, useRef, useEffect } from 'react'
 import Antigravity from './Antigravity'
 
-const PRESETS = ['Russian Rock', 'Indie Folk', 'Electronic', 'Jazz', 'Hip-Hop', 'Classical', 'Pop', 'Metal', 'Ambient', 'Lo-fi']
+const API_URL = 'https://web-production-c1b2.up.railway.app'
+
+const PRESETS = ['Rock', 'Rap', 'Pop', 'Electronic', 'Jazz', 'Lo-fi', 'Classical']
+
+const GENRE_MAP = {
+  'rock': 'rock',
+  'rap': 'rap',
+  'pop': 'pop',
+  'electronic': 'electronic',
+  'jazz': 'jazz',
+  'lo-fi': 'lofi',
+  'lofi': 'lofi',
+  'classical': 'classical',
+}
 
 const PIPELINE_STEPS = [
   'Анализ текста и фонетики',
@@ -44,33 +57,46 @@ const DEFAULT_LYRICS = `[intro]
 [outro]
 (гитара затихает, эхо последней строки)`
 
+function resolveGenre(styleStr) {
+  const lower = styleStr.toLowerCase()
+  for (const [key, val] of Object.entries(GENRE_MAP)) {
+    if (lower.includes(key)) return val
+  }
+  return 'rock'
+}
+
 export default function Generator() {
   const [style, setStyle] = useState('Russian rock, post-punk, baritone male vocal, acoustic guitar intro building to electric guitar and drums, melancholic yet powerful, nostalgic, 115 BPM, 1980s Soviet rock, reverb vocals, minor key')
   const [activeChip, setActiveChip] = useState(-1)
   const [lyrics, setLyrics] = useState(DEFAULT_LYRICS)
-  const [duration, setDuration] = useState(30)
   const [lang, setLang] = useState('ru')
   const [isGenerating, setIsGenerating] = useState(false)
   const [currentStep, setCurrentStep] = useState(0)
   const [isComplete, setIsComplete] = useState(false)
   const [elapsed, setElapsed] = useState('')
+  const [audioUrl, setAudioUrl] = useState('')
+  const [error, setError] = useState('')
   const timersRef = useRef([])
   const elRef = useRef(null)
   const startRef = useRef(null)
+  const abortRef = useRef(null)
 
   useEffect(() => {
     return () => {
       timersRef.current.forEach(clearTimeout)
       clearInterval(elRef.current)
+      if (abortRef.current) abortRef.current.abort()
     }
   }, [])
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     if (isGenerating) return
     if (!lyrics.trim()) { alert('Введи текст'); return }
 
     setIsGenerating(true)
     setIsComplete(false)
+    setError('')
+    setAudioUrl('')
     setCurrentStep(1)
     startRef.current = Date.now()
     elRef.current = setInterval(() => {
@@ -79,24 +105,60 @@ export default function Generator() {
 
     timersRef.current = [
       setTimeout(() => setCurrentStep(2), 3000),
-      setTimeout(() => setCurrentStep(3), 6000),
-      setTimeout(() => setCurrentStep(4), 9000),
-      setTimeout(() => {
-        setCurrentStep(5)
-        setIsGenerating(false)
-        setIsComplete(true)
-        clearInterval(elRef.current)
-        setElapsed('12.0s ✓')
-      }, 12000),
+      setTimeout(() => setCurrentStep(3), 8000),
+      setTimeout(() => setCurrentStep(4), 15000),
     ]
+
+    const genre = resolveGenre(style)
+    const controller = new AbortController()
+    abortRef.current = controller
+
+    try {
+      const res = await fetch(`${API_URL}/api/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ genre, description: lyrics.trim() }),
+        signal: controller.signal,
+      })
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData.detail || `Ошибка сервера: ${res.status}`)
+      }
+
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+
+      timersRef.current.forEach(clearTimeout)
+      setCurrentStep(5)
+      setAudioUrl(url)
+      setIsComplete(true)
+      setIsGenerating(false)
+      clearInterval(elRef.current)
+      const totalTime = ((Date.now() - startRef.current) / 1000).toFixed(1)
+      setElapsed(totalTime + 's ✓')
+    } catch (e) {
+      timersRef.current.forEach(clearTimeout)
+      clearInterval(elRef.current)
+      setIsGenerating(false)
+      if (e.name === 'AbortError') return
+      setError(e.message || 'Неизвестная ошибка')
+      setCurrentStep(0)
+      const totalTime = ((Date.now() - startRef.current) / 1000).toFixed(1)
+      setElapsed(totalTime + 's')
+    }
   }
 
   const handleReset = () => {
     timersRef.current.forEach(clearTimeout)
     clearInterval(elRef.current)
+    if (abortRef.current) abortRef.current.abort()
+    if (audioUrl) URL.revokeObjectURL(audioUrl)
     setIsGenerating(false)
     setCurrentStep(0)
     setIsComplete(false)
+    setAudioUrl('')
+    setError('')
     setElapsed('')
   }
 
@@ -169,7 +231,14 @@ export default function Generator() {
 
           {currentStep === 0 && !isComplete && (
             <div className="s-idle">
-              Заполни форму и нажми <strong style={{ color: 'var(--txt)' }}>Generate Track</strong>
+              {error ? (
+                <div style={{ color: '#ef4444', fontSize: '.9rem', lineHeight: 1.6 }}>
+                  <span style={{ fontWeight: 600 }}>Ошибка:</span> {error}
+                  <div style={{ marginTop: '10px', color: 'var(--muted)', fontSize: '.8rem' }}>Попробуй ещё раз или выбери другой жанр</div>
+                </div>
+              ) : (
+                <>Заполни форму и нажми <strong style={{ color: 'var(--txt)' }}>Generate Track</strong></>
+              )}
             </div>
           )}
 
@@ -230,7 +299,7 @@ export default function Generator() {
                 })}
               </div>
 
-              {isComplete && (
+              {isComplete && audioUrl && (
                 <div style={{
                   marginTop: '20px', padding: '20px',
                   background: 'rgba(30,30,40,0.5)', backdropFilter: 'blur(8px)',
@@ -239,15 +308,15 @@ export default function Generator() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
                     <div style={{ width: '8px', height: '8px', background: '#22c55e', borderRadius: '50%', animation: 'gen-pulse 2s ease-in-out infinite' }} />
                     <span style={{ fontSize: '.85rem', color: '#4ade80', fontWeight: 500 }}>Трек сгенерирован</span>
-                    <span style={{ fontSize: '.85rem', color: '#6b7280' }}>· 03:04 · Russian Rock · 115 BPM</span>
+                    <span style={{ fontSize: '.85rem', color: '#6b7280' }}>· {elapsed} · {resolveGenre(style)}</span>
                   </div>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 600, color: '#fff', marginBottom: '4px' }}>Дворовый свет</div>
-                  <div style={{ fontSize: '.85rem', color: '#9ca3af', marginBottom: '14px' }}>Lofty Music AI · Russian Rock, Post-Punk</div>
-                  <audio controls style={{ width: '100%', marginBottom: '14px' }} src="/urok.mp3" />
+                  <div style={{ fontSize: '1.1rem', fontWeight: 600, color: '#fff', marginBottom: '4px' }}>AI Generated Track</div>
+                  <div style={{ fontSize: '.85rem', color: '#9ca3af', marginBottom: '14px' }}>Lofty Music AI · {style.slice(0, 50)}{style.length > 50 ? '…' : ''}</div>
+                  <audio controls style={{ width: '100%', marginBottom: '14px' }} src={audioUrl} />
                   <div style={{ display: 'flex', gap: '10px' }}>
                     <a
-                      href="/urok.mp3"
-                      download="lofty-music-dvorovoy-svet.mp3"
+                      href={audioUrl}
+                      download="lofty-music-generated.wav"
                       style={{
                         flex: 1, textAlign: 'center', padding: '10px',
                         background: '#16a34a', color: '#fff', borderRadius: '8px',
@@ -257,7 +326,7 @@ export default function Generator() {
                       onMouseEnter={e => e.currentTarget.style.background = '#15803d'}
                       onMouseLeave={e => e.currentTarget.style.background = '#16a34a'}
                     >
-                      ↓ Скачать MP3
+                      ↓ Скачать WAV
                     </a>
                     <button
                       onClick={handleReset}
