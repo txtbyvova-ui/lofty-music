@@ -3,17 +3,17 @@ import Antigravity from './Antigravity'
 
 const API_URL = 'https://lofty-music-backend.onrender.com'
 
-const PRESETS = [
-  { id: 'rock', name: 'Rock', icon: '🎸' },
-  { id: 'rap', name: 'Rap', icon: '🎤' },
-  { id: 'pop', name: 'Pop', icon: '🎵' },
-  { id: 'electronic', name: 'Electronic', icon: '🎛️' },
-  { id: 'jazz', name: 'Jazz', icon: '🎷' },
-  { id: 'lofi', name: 'Lo-Fi', icon: '☕' },
-  { id: 'classical', name: 'Classical', icon: '🎻' },
-  { id: 'metal', name: 'Metal', icon: '🤘' },
-  { id: 'ambient', name: 'Ambient', icon: '🌊' },
-  { id: 'indie', name: 'Indie', icon: '🍂' },
+const GENRES = [
+  { id: 'rock', label: '🎸 Rock' },
+  { id: 'rap', label: '🎤 Rap' },
+  { id: 'pop', label: '🎵 Pop' },
+  { id: 'electronic', label: '🎛️ Electronic' },
+  { id: 'jazz', label: '🎷 Jazz' },
+  { id: 'lofi', label: '☕ Lo-Fi' },
+  { id: 'classical', label: '🎻 Classical' },
+  { id: 'metal', label: '🤘 Metal' },
+  { id: 'ambient', label: '🌊 Ambient' },
+  { id: 'indie', label: '🍂 Indie' },
 ]
 
 
@@ -60,7 +60,6 @@ const DEFAULT_LYRICS = `[intro]
 
 
 export default function Generator() {
-  const [style, setStyle] = useState('Russian rock, post-punk, baritone male vocal, acoustic guitar intro building to electric guitar and drums, melancholic yet powerful, nostalgic, 115 BPM, 1980s Soviet rock, reverb vocals, minor key')
   const [selectedGenre, setSelectedGenre] = useState('rock')
   const [lyrics, setLyrics] = useState(DEFAULT_LYRICS)
   const [lang, setLang] = useState('ru')
@@ -156,9 +155,8 @@ export default function Generator() {
     setElapsed('')
   }
 
-  const pickChip = (id, displayName) => {
+  const pickChip = (id) => {
     setSelectedGenre(id)
-    setStyle(displayName)
   }
 
   return (
@@ -192,14 +190,13 @@ export default function Generator() {
         <div className="gcard">
           <div className="gcard-title">Parameters</div>
           <label>Genre / Style</label>
-          <input type="text" value={style} onChange={e => { setStyle(e.target.value); setSelectedGenre('') }} />
           <div className="chips">
-            {PRESETS.map((s) => (
+            {GENRES.map((g) => (
               <span
-                key={s.id}
-                className={`chip${selectedGenre === s.id ? ' on' : ''}`}
-                onClick={() => pickChip(s.id, s.name)}
-              >{s.icon} {s.name}</span>
+                key={g.id}
+                className={`chip${selectedGenre === g.id ? ' on' : ''}`}
+                onClick={() => pickChip(g.id)}
+              >{g.label}</span>
             ))}
           </div>
           <label>Lyrics</label>
@@ -302,10 +299,10 @@ export default function Generator() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
                     <div style={{ width: '8px', height: '8px', background: '#22c55e', borderRadius: '50%', animation: 'gen-pulse 2s ease-in-out infinite' }} />
                     <span style={{ fontSize: '.85rem', color: '#4ade80', fontWeight: 500 }}>Трек сгенерирован</span>
-                    <span style={{ fontSize: '.85rem', color: '#6b7280' }}>· {elapsed} · {selectedGenre}</span>
+                    <span style={{ fontSize: '.85rem', color: '#6b7280' }}>· {elapsed} · {GENRES.find(g => g.id === selectedGenre)?.label || selectedGenre}</span>
                   </div>
                   <div style={{ fontSize: '1.1rem', fontWeight: 600, color: '#fff', marginBottom: '4px' }}>AI Generated Track</div>
-                  <div style={{ fontSize: '.85rem', color: '#9ca3af', marginBottom: '14px' }}>Lofty Music AI · {style.slice(0, 50)}{style.length > 50 ? '…' : ''}</div>
+                  <div style={{ fontSize: '.85rem', color: '#9ca3af', marginBottom: '14px' }}>Lofty Music AI · {GENRES.find(g => g.id === selectedGenre)?.label || selectedGenre}</div>
                   <audio controls style={{ width: '100%', marginBottom: '14px' }} src={audioUrl} />
                   <div style={{ display: 'flex', gap: '10px' }}>
                     <a
