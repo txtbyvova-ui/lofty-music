@@ -146,11 +146,13 @@ SAM (Москва + СПб + топ-10 городов): ₽1.8 млрд/год
 ├─────────────────────────────────────────────┤
 │             AI Model Worker                  │
 │                                              │
-│  MusicGen Large (Meta) — генерация музыки    │
-│  ├── MIT лицензия, коммерческое использ.     │
-│  ├── Документированный fine-tuning pipeline  │
-│  ├── Поддержка: RU, EN, ZH, ES, FR, DE      │
-│  └── Output: 44.1kHz WAV → MP3              │
+│             AI Model                         │
+│                                              │
+│  MiniMax Music 1.5 (Ruplicate API)          │
+│  ├── 10 жанровых пресетов                    │
+│  ├── Русский вокал + кириллица              │
+│  ├── Output: MP3, полный трек 3+ мин        │
+│  └── Async polling (2-5 мин генерация)      │        │
 │                                              │
 │  Планируемая миграция → YuE (Tencent)       │
 │  ├── Dual-sequence архитектура               │
@@ -176,22 +178,25 @@ SAM (Москва + СПб + топ-10 городов): ₽1.8 млрд/год
 
 ### Выбор модели
 
-**Production (текущий PoC):** MusicGen Large (Meta)
+**Production:** MiniMax Music 1.5 (через Ruplicate API)
 
-| Критерий | MusicGen | YuE (Tencent) | Stable Audio |
-|----------|----------|---------------|-------------|
-| Лицензия | MIT ✅ | Apache 2.0 ✅ | Ограничена ❌ |
-| Документация | Полная ✅ | Минимальная ⚠️ | Средняя |
-| Fine-tuning | Готовый pipeline ✅ | Нет pipeline ❌ | Нет ❌ |
-| Production-ready | Да ✅ | Нет ❌ | Нет ❌ |
-| Сообщество | 15K+ stars ✅ | Маленькое | Среднее |
-| Time-to-deploy | 2-3 дня ✅ | 2-3 недели | 1-2 недели |
+| Критерий | MiniMax Music 1.5 | MusicGen (Meta) | YuE (Tencent) |
+|----------|-------------------|-----------------|---------------|
+| Русский вокал | ✅ Отличный | ⚠️ Средний | ⚠️ Средний |
+| Полные треки (3+ мин) | ✅ | ❌ Макс 30 сек | ⚠️ До 60 сек |
+| Lyrics input | ✅ Нативный | ❌ Нет | ⚠️ Ограничено |
+| Fine-tuning | ❌ Закрытая | ✅ Open pipeline | ❌ Нет |
+| Time-to-deploy | ✅ 1 день | 3-5 дней | 2-3 недели |
 
-MusicGen выбран для PoC по критерию **скорости вывода в production**
-и наличию документированного fine-tuning pipeline.
+MiniMax выбран потому что единственный генерирует **полные треки 
+с русским вокалом** через API. Для PoC критичнее результат, 
+чем возможность fine-tuning.
+
+**Roadmap:** Миграция на self-hosted MusicGen/YuE 
+для снижения стоимости и возможности fine-tuning.
 
 **Roadmap:** Миграция на YuE (Tencent) после выпуска
-полного training pipeline. YuE превосходит MusicGen
+полного training pipeline. YuE превосходит Minimax
 по архитектуре (dual-sequence, multi-codebook) и качеству
 вокала на не-английских языках.
 
@@ -341,9 +346,15 @@ Lofty Music — **B2B платформа** с генерацией как дви
 ### Endpoints
 
 ```
-POST  /api/generate         — создать трек
-Body: { lyrics, style, duration, language, bpm, key }
-Returns: { task_id }
+### Endpoints
+
+POST /api/generate     — сгенерировать трек
+  Body: { genre, description }
+  Returns: MP3 файл (audio/mpeg)
+
+GET  /api/genres        — список жанров (10 штук)
+GET  /api/genres/{id}   — детали жанра + дефолтный текст
+GET  /api/health        — healthcheck
 
 GET   /api/tasks/{id}       — статус задачи
 Returns: { status, audio_url, metadata }
@@ -367,15 +378,13 @@ Returns: { status, queue_depth, avg_gen_time, model_version }
 ### Пример запроса
 
 ```bash
-curl -X POST https://api.loftymusic.ai/api/generate \
+curl -X POST https://loftymusic.ru/api/generate \
   -H "Content-Type: application/json" \
   -d '{
-    "lyrics": "[verse]\nОн был старше её на десять лет\n[chorus]\nПоворот, и снова поворот",
-    "style": "russian rock, male vocals, acoustic guitar, 1980s",
-    "duration": 30,
-    "language": "ru",
-    "bpm": 120
-  }'
+    "genre": "rock",
+    "description": "[verse]\nВо дворах, где сохнет бельё на ветру\nМы чертили мелом свою карту миру\n[chorus]\nДворовый свет не гаснет до утра"
+  }' \
+  --output track.mp3
 ```
 
 ### Пример ответа
