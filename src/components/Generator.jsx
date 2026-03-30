@@ -1,20 +1,21 @@
 import { useState, useRef, useEffect } from 'react'
 import Antigravity from './Antigravity'
 
-const API_URL = 'https://web-production-c1b2.up.railway.app'
+const API_URL = 'https://lofty-music-backend.onrender.com'
 
-const PRESETS = ['Rock', 'Rap', 'Pop', 'Electronic', 'Jazz', 'Lo-fi', 'Classical']
+const PRESETS = [
+  { id: 'rock', name: 'Rock', icon: '🎸' },
+  { id: 'rap', name: 'Rap', icon: '🎤' },
+  { id: 'pop', name: 'Pop', icon: '🎵' },
+  { id: 'electronic', name: 'Electronic', icon: '🎛️' },
+  { id: 'jazz', name: 'Jazz', icon: '🎷' },
+  { id: 'lofi', name: 'Lo-Fi', icon: '☕' },
+  { id: 'classical', name: 'Classical', icon: '🎻' },
+  { id: 'metal', name: 'Metal', icon: '🤘' },
+  { id: 'ambient', name: 'Ambient', icon: '🌊' },
+  { id: 'indie', name: 'Indie', icon: '🍂' },
+]
 
-const GENRE_MAP = {
-  'rock': 'rock',
-  'rap': 'rap',
-  'pop': 'pop',
-  'electronic': 'electronic',
-  'jazz': 'jazz',
-  'lo-fi': 'lofi',
-  'lofi': 'lofi',
-  'classical': 'classical',
-}
 
 const PIPELINE_STEPS = [
   'Анализ текста и фонетики',
@@ -57,17 +58,10 @@ const DEFAULT_LYRICS = `[intro]
 [outro]
 (гитара затихает, эхо последней строки)`
 
-function resolveGenre(styleStr) {
-  const lower = styleStr.toLowerCase()
-  for (const [key, val] of Object.entries(GENRE_MAP)) {
-    if (lower.includes(key)) return val
-  }
-  return 'rock'
-}
 
 export default function Generator() {
   const [style, setStyle] = useState('Russian rock, post-punk, baritone male vocal, acoustic guitar intro building to electric guitar and drums, melancholic yet powerful, nostalgic, 115 BPM, 1980s Soviet rock, reverb vocals, minor key')
-  const [activeChip, setActiveChip] = useState(-1)
+  const [selectedGenre, setSelectedGenre] = useState('rock')
   const [lyrics, setLyrics] = useState(DEFAULT_LYRICS)
   const [lang, setLang] = useState('ru')
   const [isGenerating, setIsGenerating] = useState(false)
@@ -109,7 +103,7 @@ export default function Generator() {
       setTimeout(() => setCurrentStep(4), 15000),
     ]
 
-    const genre = resolveGenre(style)
+    const genre = selectedGenre
     const controller = new AbortController()
     abortRef.current = controller
 
@@ -162,9 +156,9 @@ export default function Generator() {
     setElapsed('')
   }
 
-  const pickChip = (i, val) => {
-    setStyle(val)
-    setActiveChip(i)
+  const pickChip = (id, displayName) => {
+    setSelectedGenre(id)
+    setStyle(displayName)
   }
 
   return (
@@ -198,14 +192,14 @@ export default function Generator() {
         <div className="gcard">
           <div className="gcard-title">Parameters</div>
           <label>Genre / Style</label>
-          <input type="text" value={style} onChange={e => { setStyle(e.target.value); setActiveChip(-1) }} />
+          <input type="text" value={style} onChange={e => { setStyle(e.target.value); setSelectedGenre('') }} />
           <div className="chips">
-            {PRESETS.map((s, i) => (
+            {PRESETS.map((s) => (
               <span
-                key={i}
-                className={`chip${activeChip === i ? ' on' : ''}`}
-                onClick={() => pickChip(i, s)}
-              >{s}</span>
+                key={s.id}
+                className={`chip${selectedGenre === s.id ? ' on' : ''}`}
+                onClick={() => pickChip(s.id, s.name)}
+              >{s.icon} {s.name}</span>
             ))}
           </div>
           <label>Lyrics</label>
@@ -308,7 +302,7 @@ export default function Generator() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
                     <div style={{ width: '8px', height: '8px', background: '#22c55e', borderRadius: '50%', animation: 'gen-pulse 2s ease-in-out infinite' }} />
                     <span style={{ fontSize: '.85rem', color: '#4ade80', fontWeight: 500 }}>Трек сгенерирован</span>
-                    <span style={{ fontSize: '.85rem', color: '#6b7280' }}>· {elapsed} · {resolveGenre(style)}</span>
+                    <span style={{ fontSize: '.85rem', color: '#6b7280' }}>· {elapsed} · {selectedGenre}</span>
                   </div>
                   <div style={{ fontSize: '1.1rem', fontWeight: 600, color: '#fff', marginBottom: '4px' }}>AI Generated Track</div>
                   <div style={{ fontSize: '.85rem', color: '#9ca3af', marginBottom: '14px' }}>Lofty Music AI · {style.slice(0, 50)}{style.length > 50 ? '…' : ''}</div>
@@ -316,7 +310,7 @@ export default function Generator() {
                   <div style={{ display: 'flex', gap: '10px' }}>
                     <a
                       href={audioUrl}
-                      download="lofty-music-generated.wav"
+                      download="lofty-music.mp3"
                       style={{
                         flex: 1, textAlign: 'center', padding: '10px',
                         background: '#16a34a', color: '#fff', borderRadius: '8px',
@@ -326,7 +320,7 @@ export default function Generator() {
                       onMouseEnter={e => e.currentTarget.style.background = '#15803d'}
                       onMouseLeave={e => e.currentTarget.style.background = '#16a34a'}
                     >
-                      ↓ Скачать WAV
+                      ↓ Скачать MP3
                     </a>
                     <button
                       onClick={handleReset}
